@@ -1,9 +1,4 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Md5Form from "../components/Md5Form";
 import { getMd5 } from "../providers/md5Provider";
 
@@ -20,6 +15,7 @@ describe("Md5Form component", () => {
 
   it("changing input value render the value in span element with '.data-text' class", () => {
     const { container } = render(<Md5Form />);
+
     const inputElement = screen.getByRole("textbox");
     fireEvent.change(inputElement, { target: { value: "Lorem ipsum dolor" } });
 
@@ -58,18 +54,42 @@ describe("Md5Form component", () => {
 
     const { container } = render(<Md5Form getMd5={getMd5} />);
 
-    const inputElement = screen.getByRole("textbox");
-    fireEvent.change(inputElement, { target: { value: mockInputValue } });
+    const submitButton = screen.getByRole("button", { name: "send" });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      const strongElement = container.querySelector(".data-md5");
+      expect(strongElement).toHaveTextContent(mockReceivedData);
+    });
+
+    spy.mockRestore();
+  });
+
+  it("changing input element clear strong element with '.data-md5' class", async () => {
+    const spy = jest.spyOn(window, "fetch");
+
+    window.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ Digest: mockReceivedData }),
+    });
+
+    const { container } = render(<Md5Form getMd5={getMd5} />);
 
     const submitButton = screen.getByRole("button", { name: "send" });
     fireEvent.click(submitButton);
 
+    const inputElement = screen.getByRole("textbox");
+    const strongElement = container.querySelector(".data-md5");
 
     await waitFor(() => {
-        const strongElement =  container.querySelector('.data-md5');
-        expect(strongElement).toHaveTextContent(mockReceivedData);
-    })
-    
+      expect(strongElement).toHaveTextContent(mockReceivedData);
+    });
+
+    fireEvent.change(inputElement, {
+      target: { value: "Lorem ipsum dolor" },
+    });
+
+    expect(strongElement).toHaveTextContent("");
     spy.mockRestore();
   });
 });
